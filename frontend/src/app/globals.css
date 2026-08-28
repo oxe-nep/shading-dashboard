@@ -246,6 +246,15 @@ body {
 .btn-icon {
   padding: 4px 8px;
   min-width: 32px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+
+.btn-icon:hover:not(:disabled) {
+  color: var(--text-primary);
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .card-body-compact {
