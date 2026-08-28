@@ -95,6 +95,7 @@ jobs:
           tags: ${{ steps.meta-frontend.outputs.tags }}
           labels: ${{ steps.meta-frontend.outputs.labels }}
           build-args: |
+            BACKEND_URL=http://shading-dashboard-backend:8080
             NEXT_PUBLIC_WS_URL=wss://shading-dashboard.nepsweden.tech/ws
           cache-from: type=gha
           cache-to: type=gha,mode=max

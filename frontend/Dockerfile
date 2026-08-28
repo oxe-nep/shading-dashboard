@@ -3,7 +3,9 @@ WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm install
 COPY . .
+ARG BACKEND_URL=http://shading-dashboard-backend:8080
 ARG NEXT_PUBLIC_WS_URL=ws://localhost:8080/ws
+ENV BACKEND_URL=$BACKEND_URL
 ENV NEXT_PUBLIC_WS_URL=$NEXT_PUBLIC_WS_URL
 RUN npm run build
 

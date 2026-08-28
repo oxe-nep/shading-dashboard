@@ -10,9 +10,12 @@ export default function ConfigPage() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
-    fetchConfig().then(setConfig).catch(console.error);
+    fetchConfig()
+      .then(setConfig)
+      .catch((err) => setLoadError(String(err)));
   }, []);
 
   const updateSwitch = (index: number, field: keyof AppConfig['switches'][0], value: string | number) => {
@@ -42,10 +45,19 @@ export default function ConfigPage() {
   if (!config) {
     return (
       <div className="loading">
-        <div className="loading-spinner">
-          <i className="fas fa-spinner fa-spin" />
-        </div>
-        <span>Loading…</span>
+        {loadError ? (
+          <>
+            <i className="fas fa-exclamation-circle" />
+            <span>{loadError}</span>
+          </>
+        ) : (
+          <>
+            <div className="loading-spinner">
+              <i className="fas fa-spinner fa-spin" />
+            </div>
+            <span>Loading…</span>
+          </>
+        )}
       </div>
     );
   }
