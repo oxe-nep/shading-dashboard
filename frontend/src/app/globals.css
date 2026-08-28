@@ -1,0 +1,548 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --bg-base: #1e1e1e;
+  --bg-surface: #2a2a2a;
+  --bg-elevated: #333333;
+  --bg-input: #252525;
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --text-primary: #f0f0f0;
+  --text-secondary: #a0a0a0;
+  --text-muted: #707070;
+  --accent: #5b9fd4;
+  --accent-hover: #7ab3de;
+  --green: #5cb85c;
+  --red: #e74c3c;
+  --orange: #f0ad4e;
+  --border-radius: 12px;
+  --transition: all 0.2s ease;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: var(--bg-base);
+  min-height: 100vh;
+  color: var(--text-primary);
+  line-height: 1.6;
+}
+
+.container {
+  max-width: none;
+  width: 100%;
+  margin: 0 auto;
+  padding: 16px 20px;
+  min-height: 100vh;
+}
+
+.compact-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.header-brand {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.nep-logo {
+  height: 40px;
+  width: auto;
+  flex-shrink: 0;
+  display: block;
+}
+
+.header-brand h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.01em;
+}
+
+.header-nav {
+  display: flex;
+  gap: 12px;
+}
+
+.header-settings {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1.15rem;
+  transition: var(--transition);
+}
+
+.header-settings:hover {
+  color: var(--text-primary);
+}
+
+.connection-status-fixed {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  z-index: 1000;
+  color: var(--text-muted);
+}
+
+.connection-status-fixed.connected { color: var(--green); }
+.connection-status-fixed.disconnected { color: var(--red); }
+.connection-status-fixed i { font-size: 0.55rem; }
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 40px;
+  color: var(--text-secondary);
+}
+
+.dashboard-section { margin-bottom: 32px; }
+
+.cards-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.switches-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1500px) {
+  .switches-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .switches-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card-panel {
+  background: var(--bg-surface);
+  border: 2px solid var(--border-subtle);
+  border-radius: var(--border-radius);
+  padding: 14px;
+  min-width: 0;
+}
+
+.card-panel.online {
+  border-color: rgba(92, 184, 92, 0.55);
+}
+
+.card-panel.offline {
+  border-color: rgba(231, 76, 60, 0.55);
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-title h3 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot.online { background: var(--green); }
+.status-dot.offline { background: var(--red); }
+
+.card-refresh-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.card-refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.card-body { margin-bottom: 12px; }
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 0.875rem;
+}
+
+.info-row .label { color: var(--text-secondary); }
+
+.status-table-wrapper {
+  overflow: visible;
+}
+
+.status-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.78rem;
+}
+
+.status-table th,
+.status-table td {
+  padding: 5px 6px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+  white-space: nowrap;
+}
+
+.status-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+}
+
+.pill-up { background: rgba(92, 184, 92, 0.2); color: var(--green); }
+.pill-down { background: rgba(231, 76, 60, 0.2); color: var(--red); }
+.pill-unknown { background: rgba(255, 255, 255, 0.08); color: var(--text-muted); }
+
+.status-ok td:first-child { color: var(--text-primary); }
+.status-bad td:first-child { color: var(--text-muted); }
+
+.apply-state-pending {
+  background: rgba(240, 173, 78, 0.1);
+  box-shadow: inset 3px 0 0 var(--orange);
+}
+
+.apply-state-success {
+  background: rgba(92, 184, 92, 0.12);
+  box-shadow: inset 3px 0 0 var(--green);
+}
+
+.apply-state-error {
+  background: rgba(231, 76, 60, 0.1);
+  box-shadow: inset 3px 0 0 var(--red);
+}
+
+.group-vlan-apply {
+  margin: 12px 0 16px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+}
+
+.group-vlan-apply.apply-state-pending {
+  border-color: rgba(240, 173, 78, 0.45);
+  background: rgba(240, 173, 78, 0.08);
+}
+
+.group-vlan-apply.apply-state-success {
+  border-color: rgba(92, 184, 92, 0.45);
+  background: rgba(92, 184, 92, 0.08);
+}
+
+.group-vlan-apply.apply-state-error {
+  border-color: rgba(231, 76, 60, 0.45);
+  background: rgba(231, 76, 60, 0.08);
+}
+
+.group-vlan-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.config-message.success {
+  color: #8fd88f;
+}
+.status-bad td { color: var(--text-secondary); }
+
+.vlan-set-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.vlan-set-row input {
+  width: 80px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.vlan-select {
+  min-width: 140px;
+  max-width: 180px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+}
+
+.vlan-select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.group-apply { margin-top: 8px; }
+
+.badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.badge-green { background: rgba(92, 184, 92, 0.15); color: #8fd88f; }
+.badge-orange { background: rgba(240, 173, 78, 0.15); color: var(--orange); }
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-sm { padding: 6px 10px; font-size: 0.8rem; }
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+.btn-danger { background: rgba(231, 76, 60, 0.85); color: #fff; }
+
+.card-error {
+  margin-top: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(231, 76, 60, 0.12);
+  color: #ff8a7a;
+  font-size: 0.85rem;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px;
+  color: var(--text-muted);
+}
+
+.empty-cell {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 20px !important;
+}
+
+.config-page { max-width: 1200px; }
+
+.config-section h2 { margin-bottom: 8px; }
+
+.config-intro {
+  color: var(--text-secondary);
+  margin-bottom: 20px;
+  font-size: 0.9rem;
+}
+
+.config-table-wrapper { overflow-x: auto; margin-bottom: 20px; }
+
+.config-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.config-table th,
+.config-table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  text-align: left;
+}
+
+.config-table input {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.config-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.config-message.error { color: var(--red); margin-top: 12px; }
+
+.group-editor { margin-bottom: 20px; }
+
+.group-editor-header {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.group-name-input {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.port-picker-switch { margin-bottom: 16px; }
+
+.port-picker-switch h4 { margin-bottom: 6px; }
+
+.picker-hint, .muted { color: var(--text-muted); font-size: 0.8rem; }
+
+.port-checkboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.port-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+code {
+  background: var(--bg-elevated);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.85em;
+}
+
+.vlans-page { max-width: 720px; }
+
+.vlan-limit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.vlan-hint {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+
+.vlan-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.vlan-toolbar .btn-sm {
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+}
+
+.vlan-count {
+  margin-left: auto;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.vlan-table .vlan-check-col {
+  width: 72px;
+  text-align: center;
+}
+
+.vlan-table input[type='checkbox'] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.vlan-row-excluded td:not(.vlan-check-col) {
+  opacity: 0.45;
+}
+
+.action-feedback {
+  position: fixed;
+  top: 72px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 0.875rem;
+  max-width: 420px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+.action-feedback-pending {
+  background: rgba(240, 173, 78, 0.18);
+  border: 1px solid rgba(240, 173, 78, 0.35);
+  color: var(--orange);
+}
+
+.action-feedback-success {
+  background: rgba(92, 184, 92, 0.18);
+  border: 1px solid rgba(92, 184, 92, 0.35);
+  color: #8fd88f;
+}
+
+.action-feedback-error {
+  background: rgba(231, 76, 60, 0.18);
+  border: 1px solid rgba(231, 76, 60, 0.35);
+  color: #ff8a7a;
+}

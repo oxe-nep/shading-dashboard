@@ -1,0 +1,7 @@
+node_modules/
+.next/
+backend/bin/
+backend/data/config.json
+*.exe
+.env
+.env.local

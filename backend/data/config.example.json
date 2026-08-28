@@ -1,0 +1,10 @@
+{
+  "switches": [
+    { "id": "sw-1", "name": "Switch 1", "ip": "", "username": "", "password": "", "port": 830 },
+    { "id": "sw-2", "name": "Switch 2", "ip": "", "username": "", "password": "", "port": 830 },
+    { "id": "sw-3", "name": "Switch 3", "ip": "", "username": "", "password": "", "port": 830 },
+    { "id": "sw-4", "name": "Switch 4", "ip": "", "username": "", "password": "", "port": 830 }
+  ],
+  "portGroups": [],
+  "allowedVlans": []
+}

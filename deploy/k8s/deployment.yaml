@@ -1,0 +1,201 @@
+# Shading Dashboard — k8s deployment
+# Host: shading-dashboard.nepsweden.tech
+# Requires: ghcr-creds, https-redirect middleware, letsencrypt certResolver
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: shading-dashboard-secrets
+type: Opaque
+stringData:
+  PORT: "8080"
+  CONFIG_PATH: "/app/data/config.json"
+  CORS_ORIGIN: "*"
+  POLL_INTERVAL_MS: "600000"
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: shading-dashboard-config
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: longhorn
+  resources:
+    requests:
+      storage: 64Mi
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shading-dashboard-backend
+  labels:
+    app: shading-dashboard-backend
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: shading-dashboard-backend
+  template:
+    metadata:
+      labels:
+        app: shading-dashboard-backend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-creds
+      containers:
+        - name: backend
+          image: ghcr.io/oxe-nep/shading-dashboard-backend:latest
+          imagePullPolicy: Always
+          envFrom:
+            - secretRef:
+                name: shading-dashboard-secrets
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: config-data
+              mountPath: /app/data
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      volumes:
+        - name: config-data
+          persistentVolumeClaim:
+            claimName: shading-dashboard-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shading-dashboard-backend
+spec:
+  selector:
+    app: shading-dashboard-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shading-dashboard-frontend
+  labels:
+    app: shading-dashboard-frontend
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: shading-dashboard-frontend
+  template:
+    metadata:
+      labels:
+        app: shading-dashboard-frontend
+    spec:
+      imagePullSecrets:
+        - name: ghcr-creds
+      containers:
+        - name: frontend
+          image: ghcr.io/oxe-nep/shading-dashboard-frontend:latest
+          imagePullPolicy: Always
+          env:
+            - name: BACKEND_URL
+              value: http://shading-dashboard-backend:8080
+          ports:
+            - name: http
+              containerPort: 3000
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shading-dashboard-frontend
+spec:
+  selector:
+    app: shading-dashboard-frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: 3000
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: shading-dashboard-ws
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`shading-dashboard.nepsweden.tech`) && PathPrefix(`/ws`)
+      kind: Rule
+      services:
+        - name: shading-dashboard-backend
+          port: 8080
+  tls:
+    certResolver: letsencrypt
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: shading-dashboard-http
+spec:
+  entryPoints:
+    - web
+  routes:
+    - match: Host(`shading-dashboard.nepsweden.tech`)
+      kind: Rule
+      services:
+        - name: shading-dashboard-frontend
+          port: 3000
+      middlewares:
+        - name: https-redirect
+          namespace: default
+
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: shading-dashboard-https
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`shading-dashboard.nepsweden.tech`)
+      kind: Rule
+      services:
+        - name: shading-dashboard-frontend
+          port: 3000
+  tls:
+    certResolver: letsencrypt
