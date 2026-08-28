@@ -3,7 +3,6 @@ package switchdrv
 import (
 	"context"
 	"fmt"
-	"runtime"
 	"sync"
 	"time"
 
@@ -37,11 +36,8 @@ func driverOptions(cfg model.SwitchConfig) []util.Option {
 		options.WithAuthNoStrictKey(),
 		options.WithPort(port),
 		options.WithTimeoutOps(90 * time.Second),
-	}
-
-	// "system" SSH wrapper is unreliable for NETCONF on Windows.
-	if runtime.GOOS == "windows" {
-		opts = append(opts, options.WithTransportType("standard"))
+		// Pure Go SSH — works in minimal containers without openssh-client.
+		options.WithTransportType("standard"),
 	}
 
 	return opts
