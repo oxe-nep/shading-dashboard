@@ -12,11 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	defaultPollInterval = 10 * time.Minute
-	defaultOfflineAfter = 3
-	minPollInterval     = 30 * time.Second
-)
+const defaultOfflineAfter = 3
 
 type Manager struct {
 	store        *config.Store
@@ -25,11 +21,8 @@ type Manager struct {
 	states       map[string]*model.SwitchRuntimeState
 	clients      map[string]*Client
 	failures     map[string]int
-	pollInterval time.Duration
 	offlineAfter int
 	onUpdate     func(model.RuntimeSnapshot)
-	stopCh       chan struct{}
-	wg           sync.WaitGroup
 }
 
 func NewManager(store *config.Store) *Manager {
@@ -39,20 +32,12 @@ func NewManager(store *config.Store) *Manager {
 		states:       make(map[string]*model.SwitchRuntimeState),
 		clients:      make(map[string]*Client),
 		failures:     make(map[string]int),
-		pollInterval: defaultPollInterval,
 		offlineAfter: defaultOfflineAfter,
-		stopCh:       make(chan struct{}),
 	}
 }
 
 func (m *Manager) SetUpdateHandler(fn func(model.RuntimeSnapshot)) {
 	m.onUpdate = fn
-}
-
-func (m *Manager) SetPollInterval(d time.Duration) {
-	if d >= minPollInterval {
-		m.pollInterval = d
-	}
 }
 
 func (m *Manager) lockSwitch(id string) {
@@ -138,16 +123,7 @@ func (m *Manager) SyncFromConfig() {
 	}
 }
 
-func (m *Manager) RestartPolling() {
-	m.StopPolling()
-	m.stopCh = make(chan struct{})
-	m.startPolling()
-}
-
-func (m *Manager) StopPolling() {
-	close(m.stopCh)
-	m.wg.Wait()
-
+func (m *Manager) closeAllClients() {
 	m.mu.Lock()
 	for _, c := range m.clients {
 		c.Close()
@@ -156,30 +132,10 @@ func (m *Manager) StopPolling() {
 	m.mu.Unlock()
 }
 
-func (m *Manager) startPolling() {
-	cfg := m.store.Get()
-	for _, sw := range cfg.Switches {
-		sw := sw
-		m.wg.Add(1)
-		go m.pollLoop(sw)
-	}
-}
-
-func (m *Manager) pollLoop(sw model.SwitchConfig) {
-	ticker := time.NewTicker(m.pollInterval)
-	defer ticker.Stop()
-	defer m.wg.Done()
-
-	m.pollSwitch(sw)
-
-	for {
-		select {
-		case <-m.stopCh:
-			return
-		case <-ticker.C:
-			m.pollSwitch(sw)
-		}
-	}
+// RefreshAll re-polls every configured switch. Used at startup and after switch config changes.
+func (m *Manager) RefreshAll() {
+	m.closeAllClients()
+	m.PollAll()
 }
 
 func (m *Manager) PollSwitchByID(id string) {
@@ -473,5 +429,5 @@ func (e errSentinel) Error() string { return string(e) }
 
 func (m *Manager) Start() {
 	m.SyncFromConfig()
-	m.startPolling()
+	go m.PollAll()
 }

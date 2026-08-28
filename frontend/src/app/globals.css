@@ -389,6 +389,26 @@ body {
   box-shadow: inset 3px 0 0 var(--red);
 }
 
+.remote-change {
+  animation: remoteFlash 1.4s ease-out;
+  background: rgba(91, 159, 212, 0.12);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.remote-change-field {
+  color: var(--accent-hover);
+  font-weight: 500;
+}
+
+@keyframes remoteFlash {
+  0% {
+    background: rgba(91, 159, 212, 0.32);
+  }
+  100% {
+    background: rgba(91, 159, 212, 0.12);
+  }
+}
+
 .group-vlan-apply {
   margin: 12px 0 16px;
   padding: 12px;
@@ -680,4 +700,10 @@ code {
   background: rgba(231, 76, 60, 0.18);
   border: 1px solid rgba(231, 76, 60, 0.35);
   color: #ff8a7a;
+}
+
+.action-feedback-info {
+  background: rgba(91, 159, 212, 0.18);
+  border: 1px solid rgba(91, 159, 212, 0.35);
+  color: var(--accent-hover);
 }

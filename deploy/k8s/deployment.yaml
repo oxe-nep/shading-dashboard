@@ -12,7 +12,6 @@ stringData:
   PORT: "8080"
   CONFIG_PATH: "/app/data/config.json"
   CORS_ORIGIN: "*"
-  POLL_INTERVAL_MS: "600000"
 
 ---
 apiVersion: v1

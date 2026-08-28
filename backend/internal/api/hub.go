@@ -41,6 +41,26 @@ func (h *Hub) Broadcast(snapshot model.RuntimeSnapshot) {
 	h.broadcast(msg)
 }
 
+func (h *Hub) NotifyPortVLANChanged(switchID, port string, vlan int, ok bool) {
+	h.broadcast(model.WSMessage{
+		Type:     "vlan-changed",
+		SwitchID: switchID,
+		Port:     port,
+		VLAN:     vlan,
+		OK:       ok,
+	})
+}
+
+func (h *Hub) NotifyGroupVLANChanged(groupID string, vlan int, ok bool, results []model.PortApplyResult) {
+	h.broadcast(model.WSMessage{
+		Type:    "group-vlan-changed",
+		GroupID: groupID,
+		VLAN:    vlan,
+		OK:      ok,
+		Results: results,
+	})
+}
+
 func (h *Hub) broadcast(msg model.WSMessage) {
 	data, err := json.Marshal(msg)
 	if err != nil {
@@ -116,13 +136,7 @@ func (h *Hub) handleMessage(conn *websocket.Conn, data []byte) {
 			_ = h.write(conn, model.WSMessage{Type: "error", Message: err.Error()})
 			return
 		}
-		_ = h.write(conn, model.WSMessage{
-			Type:     "vlan-changed",
-			SwitchID: msg.SwitchID,
-			Port:     msg.Port,
-			VLAN:     msg.VLAN,
-			OK:       true,
-		})
+		h.NotifyPortVLANChanged(msg.SwitchID, msg.Port, msg.VLAN, true)
 
 	case "set-group-vlan":
 		if msg.GroupID == "" || msg.VLAN <= 0 {
@@ -141,14 +155,7 @@ func (h *Hub) handleMessage(conn *websocket.Conn, data []byte) {
 				break
 			}
 		}
-		_ = h.write(conn, model.WSMessage{
-			Type:    "group-vlan-changed",
-			GroupID: msg.GroupID,
-			VLAN:    msg.VLAN,
-			OK:      ok,
-			Results: results,
-		})
-		h.Broadcast(h.manager.Snapshot())
+		h.NotifyGroupVLANChanged(msg.GroupID, msg.VLAN, ok, results)
 
 	case "refresh-switch":
 		if msg.SwitchID == "" {

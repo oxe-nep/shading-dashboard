@@ -17,6 +17,8 @@ export default function ActionFeedbackBanner({ feedback }: ActionFeedbackProps) 
             ? 'fa-spinner fa-spin'
             : feedback.type === 'success'
               ? 'fa-check-circle'
+              : feedback.type === 'info'
+                ? 'fa-arrows-rotate'
               : 'fa-exclamation-circle'
         }`}
       />

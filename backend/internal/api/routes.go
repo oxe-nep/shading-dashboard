@@ -97,12 +97,11 @@ func (s *Server) handlePutPortGroups(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.store.Get())
 }
 
-func (s *Server) applyConfigUpdate(restartPolling bool) {
+func (s *Server) applyConfigUpdate(refreshSwitches bool) {
 	s.manager.SyncFromConfig()
 	s.hub.Broadcast(s.manager.Snapshot())
-	if restartPolling {
-		s.manager.RestartPolling()
-		go s.manager.PollAll()
+	if refreshSwitches {
+		go s.manager.RefreshAll()
 	}
 }
 
@@ -132,6 +131,7 @@ func (s *Server) handleSetPortVLAN(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	s.hub.NotifyPortVLANChanged(id, port, body.VLAN, true)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
@@ -147,6 +147,14 @@ func (s *Server) handleSetGroupVLAN(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	ok := true
+	for _, r := range results {
+		if !r.OK {
+			ok = false
+			break
+		}
+	}
+	s.hub.NotifyGroupVLANChanged(id, body.VLAN, ok, results)
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true, "results": results})
 }
 

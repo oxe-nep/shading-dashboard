@@ -37,7 +37,6 @@ npm run dev
 |----------|---------|-------------|
 | `PORT` | `8080` | Backend HTTP port |
 | `CONFIG_PATH` | `data/config.json` | Switch + group config |
-| `POLL_INTERVAL_MS` | `600000` | Poll interval per switch (min 30000) |
 | `CORS_ORIGIN` | `*` | CORS allowed origin |
 | `BACKEND_URL` | `http://localhost:8080` | Next.js rewrite target |
 | `NEXT_PUBLIC_WS_URL` | same-host `/ws` in prod | WebSocket URL for browser |

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -22,7 +21,6 @@ func main() {
 	configPath := envOr("CONFIG_PATH", "data/config.json")
 	port := envIntOr("PORT", 8080)
 	corsOrigin := envOr("CORS_ORIGIN", "*")
-	pollMs := envIntOr("POLL_INTERVAL_MS", 600000)
 
 	store, err := config.NewStore(configPath)
 	if err != nil {
@@ -30,9 +28,6 @@ func main() {
 	}
 
 	manager := switchdrv.NewManager(store)
-	if pollMs >= 30000 {
-		manager.SetPollInterval(time.Duration(pollMs) * time.Millisecond)
-	}
 
 	hub := api.NewHub(manager)
 	manager.SetUpdateHandler(hub.Broadcast)

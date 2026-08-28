@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SwitchRuntimeState, VlanInfo } from '@/lib/types';
 import SetVlanModal from '@/components/SetVlanModal';
+import { RemoteHighlight } from '@/hooks/useWebSocket';
+import { PortChangeField } from '@/lib/portChanges';
+import { SwitchRuntimeState, VlanInfo } from '@/lib/types';
 
 interface SwitchPanelProps {
   sw: SwitchRuntimeState;
@@ -10,6 +12,7 @@ interface SwitchPanelProps {
   onRefresh: (id: string) => void;
   onSetVlan: (switchId: string, port: string, vlan: number) => void;
   getPortApplyStatus: (switchId: string, port: string) => 'pending' | 'success' | 'error' | null;
+  getPortRemoteChange?: (switchId: string, port: string) => RemoteHighlight | null;
   disabled?: boolean;
 }
 
@@ -25,12 +28,22 @@ function formatTime(iso: string | null): string {
 function rowClass(
   operState: string,
   applyStatus: 'pending' | 'success' | 'error' | null,
+  remoteFields: string[] | undefined,
 ): string {
   const classes = [operState === 'down' ? 'status-bad' : 'status-ok'];
   if (applyStatus) {
     classes.push(`apply-state-${applyStatus}`);
+  } else if (remoteFields && remoteFields.length > 0) {
+    classes.push('remote-change');
   }
   return classes.join(' ');
+}
+
+function cellClass(base: string, remoteFields: string[] | undefined, field: string): string {
+  if (remoteFields?.includes(field)) {
+    return `${base} remote-change-field`;
+  }
+  return base;
 }
 
 export default function SwitchPanel({
@@ -39,6 +52,7 @@ export default function SwitchPanel({
   onRefresh,
   onSetVlan,
   getPortApplyStatus,
+  getPortRemoteChange,
   disabled,
 }: SwitchPanelProps) {
   const [modalPort, setModalPort] = useState<string | null>(null);
@@ -94,17 +108,25 @@ export default function SwitchPanel({
           <tbody>
             {sw.ports.map((p) => {
               const applyStatus = getPortApplyStatus(sw.id, p.name);
+              const remote = getPortRemoteChange?.(sw.id, p.name);
+              const remoteFields = remote?.fields as PortChangeField[] | undefined;
               const pending = applyStatus === 'pending';
               return (
-                <tr key={p.name} className={rowClass(p.operState, applyStatus)}>
+                <tr key={p.name} className={rowClass(p.operState, applyStatus, remoteFields)}>
                   <td className="port-name">{p.name}</td>
-                  <td className="port-description" title={p.description || undefined}>
+                  <td
+                    className={cellClass('port-description', remoteFields, 'description')}
+                    title={p.description || undefined}
+                  >
                     {p.description || '—'}
                   </td>
-                  <td>
+                  <td className={cellClass('', remoteFields, 'link')}>
                     <span className={`pill pill-${p.operState}`}>{p.operState}</span>
                   </td>
-                  <td title={p.accessVlanTitle ?? undefined}>
+                  <td
+                    className={cellClass('', remoteFields, 'vlan')}
+                    title={p.accessVlanTitle ?? undefined}
+                  >
                     {p.accessVlanLabel ?? (p.accessVlan != null ? String(p.accessVlan) : '—')}
                   </td>
                   <td className="col-action">
