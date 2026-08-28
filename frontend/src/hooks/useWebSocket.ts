@@ -210,6 +210,24 @@ export function useWebSocket() {
             });
             return;
           }
+          if (msg.type === 'vlan-applying') {
+            if (msg.switchId && msg.port) {
+              const key = portApplyKey(msg.switchId, msg.port);
+              if (key !== lastPendingKey.current) {
+                setApplyState(key, { status: 'pending' });
+              }
+            }
+            return;
+          }
+          if (msg.type === 'group-vlan-applying') {
+            if (msg.groupId) {
+              const key = groupApplyKey(msg.groupId);
+              if (key !== lastPendingKey.current) {
+                setApplyState(key, { status: 'pending' });
+              }
+            }
+            return;
+          }
           if (msg.type === 'vlan-changed') {
             const key =
               msg.switchId && msg.port ? portApplyKey(msg.switchId, msg.port) : lastPendingKey.current;
@@ -224,6 +242,8 @@ export function useWebSocket() {
                 });
                 lastPendingKey.current = null;
               } else if (msg.switchId && msg.port) {
+                const key = portApplyKey(msg.switchId, msg.port);
+                setApplyState(key, { status: 'success' });
                 markRemotePorts([
                   { switchId: msg.switchId, port: msg.port, fields: ['vlan'] },
                 ]);
@@ -252,6 +272,9 @@ export function useWebSocket() {
                 });
                 lastPendingKey.current = null;
               } else {
+                if (msg.groupId) {
+                  setApplyState(groupApplyKey(msg.groupId), { status: 'success' });
+                }
                 const entries =
                   msg.results
                     ?.filter((r) => r.ok)

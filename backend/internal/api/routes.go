@@ -127,8 +127,10 @@ func (s *Server) handleSetPortVLAN(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vlan required")
 		return
 	}
+	s.hub.NotifyVlanApplying(id, port, body.VLAN)
 	if err := s.manager.SetPortVLAN(id, port, body.VLAN); err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		s.hub.NotifyPortVLANChanged(id, port, body.VLAN, false)
 		return
 	}
 	s.hub.NotifyPortVLANChanged(id, port, body.VLAN, true)
@@ -142,9 +144,11 @@ func (s *Server) handleSetGroupVLAN(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "vlan required")
 		return
 	}
+	s.hub.NotifyGroupVlanApplying(id, body.VLAN)
 	results, err := s.manager.SetGroupVLAN(id, body.VLAN)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
+		s.hub.NotifyGroupVLANChanged(id, body.VLAN, false, nil)
 		return
 	}
 	ok := true
