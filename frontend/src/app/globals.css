@@ -389,24 +389,34 @@ body {
   box-shadow: inset 3px 0 0 var(--red);
 }
 
-.remote-change {
-  animation: remoteFlash 1.4s ease-out;
-  background: rgba(91, 159, 212, 0.12);
-  box-shadow: inset 3px 0 0 var(--accent);
+.apply-badge {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
-.remote-change-field {
-  color: var(--accent-hover);
-  font-weight: 500;
+.apply-badge-pending {
+  background: rgba(240, 173, 78, 0.2);
+  color: var(--orange);
 }
 
-@keyframes remoteFlash {
-  0% {
-    background: rgba(91, 159, 212, 0.32);
-  }
-  100% {
-    background: rgba(91, 159, 212, 0.12);
-  }
+.apply-badge-success {
+  background: rgba(92, 184, 92, 0.2);
+  color: var(--green);
+}
+
+.apply-badge-error {
+  background: rgba(231, 76, 60, 0.2);
+  color: var(--red);
+}
+
+.vlan-value {
+  color: var(--text-primary);
 }
 
 .group-vlan-apply {
@@ -700,10 +710,4 @@ code {
   background: rgba(231, 76, 60, 0.18);
   border: 1px solid rgba(231, 76, 60, 0.35);
   color: #ff8a7a;
-}
-
-.action-feedback-info {
-  background: rgba(91, 159, 212, 0.18);
-  border: 1px solid rgba(91, 159, 212, 0.35);
-  color: var(--accent-hover);
 }

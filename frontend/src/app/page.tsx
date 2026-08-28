@@ -12,7 +12,6 @@ export default function DashboardPage() {
     setPortVlan,
     refreshSwitch,
     getPortApplyStatus,
-    getPortRemoteChange,
   } = useWebSocket();
   const vlanOptions =
     (snapshot.selectableVlans?.length ?? 0) > 0
@@ -47,7 +46,6 @@ export default function DashboardPage() {
               onRefresh={refreshSwitch}
               onSetVlan={setPortVlan}
               getPortApplyStatus={getPortApplyStatus}
-              getPortRemoteChange={getPortRemoteChange}
               disabled={!connected}
             />
           ))}

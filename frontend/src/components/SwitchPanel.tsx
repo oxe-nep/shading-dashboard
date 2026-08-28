@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import SetVlanModal from '@/components/SetVlanModal';
-import { RemoteHighlight } from '@/hooks/useWebSocket';
-import { PortChangeField } from '@/lib/portChanges';
 import { SwitchRuntimeState, VlanInfo } from '@/lib/types';
 
 interface SwitchPanelProps {
@@ -12,7 +10,6 @@ interface SwitchPanelProps {
   onRefresh: (id: string) => void;
   onSetVlan: (switchId: string, port: string, vlan: number) => void;
   getPortApplyStatus: (switchId: string, port: string) => 'pending' | 'success' | 'error' | null;
-  getPortRemoteChange?: (switchId: string, port: string) => RemoteHighlight | null;
   disabled?: boolean;
 }
 
@@ -28,22 +25,25 @@ function formatTime(iso: string | null): string {
 function rowClass(
   operState: string,
   applyStatus: 'pending' | 'success' | 'error' | null,
-  remoteFields: string[] | undefined,
 ): string {
   const classes = [operState === 'down' ? 'status-bad' : 'status-ok'];
   if (applyStatus) {
     classes.push(`apply-state-${applyStatus}`);
-  } else if (remoteFields && remoteFields.length > 0) {
-    classes.push('remote-change');
   }
   return classes.join(' ');
 }
 
-function cellClass(base: string, remoteFields: string[] | undefined, field: string): string {
-  if (remoteFields?.includes(field)) {
-    return `${base} remote-change-field`;
+function applyLabel(status: 'pending' | 'success' | 'error' | null): string | null {
+  switch (status) {
+    case 'pending':
+      return 'Applying…';
+    case 'success':
+      return 'Applied';
+    case 'error':
+      return 'Failed';
+    default:
+      return null;
   }
-  return base;
 }
 
 export default function SwitchPanel({
@@ -52,7 +52,6 @@ export default function SwitchPanel({
   onRefresh,
   onSetVlan,
   getPortApplyStatus,
-  getPortRemoteChange,
   disabled,
 }: SwitchPanelProps) {
   const [modalPort, setModalPort] = useState<string | null>(null);
@@ -108,26 +107,24 @@ export default function SwitchPanel({
           <tbody>
             {sw.ports.map((p) => {
               const applyStatus = getPortApplyStatus(sw.id, p.name);
-              const remote = getPortRemoteChange?.(sw.id, p.name);
-              const remoteFields = remote?.fields as PortChangeField[] | undefined;
               const pending = applyStatus === 'pending';
+              const statusLabel = applyLabel(applyStatus);
               return (
-                <tr key={p.name} className={rowClass(p.operState, applyStatus, remoteFields)}>
+                <tr key={p.name} className={rowClass(p.operState, applyStatus)}>
                   <td className="port-name">{p.name}</td>
-                  <td
-                    className={cellClass('port-description', remoteFields, 'description')}
-                    title={p.description || undefined}
-                  >
+                  <td className="port-description" title={p.description || undefined}>
                     {p.description || '—'}
                   </td>
-                  <td className={cellClass('', remoteFields, 'link')}>
+                  <td>
                     <span className={`pill pill-${p.operState}`}>{p.operState}</span>
                   </td>
-                  <td
-                    className={cellClass('', remoteFields, 'vlan')}
-                    title={p.accessVlanTitle ?? undefined}
-                  >
-                    {p.accessVlanLabel ?? (p.accessVlan != null ? String(p.accessVlan) : '—')}
+                  <td title={p.accessVlanTitle ?? undefined}>
+                    {statusLabel && (
+                      <span className={`apply-badge apply-badge-${applyStatus}`}>{statusLabel}</span>
+                    )}
+                    <span className="vlan-value">
+                      {p.accessVlanLabel ?? (p.accessVlan != null ? String(p.accessVlan) : '—')}
+                    </span>
                   </td>
                   <td className="col-action">
                     <button

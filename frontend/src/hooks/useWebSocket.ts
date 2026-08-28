@@ -1,10 +1,9 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { detectPortChanges, portChangeKey, PortChangeField } from '@/lib/portChanges';
 import { ApplyStatus, RuntimeSnapshot, WSMessage } from '@/lib/types';
 
-export type ActionFeedbackType = 'pending' | 'success' | 'error' | 'info';
+export type ActionFeedbackType = 'pending' | 'success' | 'error';
 
 export interface ActionFeedback {
   type: ActionFeedbackType;
@@ -15,12 +14,6 @@ export interface ApplyState {
   status: ApplyStatus;
   message?: string;
 }
-
-export interface RemoteHighlight {
-  fields: PortChangeField[];
-}
-
-const HIGHLIGHT_MS = 6000;
 
 function portApplyKey(switchId: string, port: string): string {
   return `port:${switchId}:${port}`;
@@ -41,12 +34,6 @@ function wsUrl(): string {
   return `${proto}//${window.location.host}/ws`;
 }
 
-function isOwnPortChange(applyStates: Record<string, ApplyState>, switchId: string, port: string): boolean {
-  const key = portApplyKey(switchId, port);
-  const state = applyStates[key]?.status;
-  return state === 'pending' || state === 'success';
-}
-
 export function useWebSocket() {
   const [connected, setConnected] = useState(false);
   const [snapshot, setSnapshot] = useState<RuntimeSnapshot>({
@@ -57,18 +44,15 @@ export function useWebSocket() {
   });
   const [feedback, setFeedback] = useState<ActionFeedback | null>(null);
   const [applyStates, setApplyStates] = useState<Record<string, ApplyState>>({});
-  const [remoteHighlights, setRemoteHighlights] = useState<Record<string, RemoteHighlight>>({});
   const wsRef = useRef<WebSocket | null>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const clearStateTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const clearHighlightTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const lastPendingKey = useRef<string | null>(null);
-  const prevSnapshotRef = useRef<RuntimeSnapshot | null>(null);
-  const applyStatesRef = useRef(applyStates);
+  const snapshotRef = useRef(snapshot);
 
   useEffect(() => {
-    applyStatesRef.current = applyStates;
-  }, [applyStates]);
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
 
   const showFeedback = useCallback((next: ActionFeedback) => {
     if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
@@ -107,70 +91,6 @@ export function useWebSocket() {
     }
   }, []);
 
-  const markRemotePorts = useCallback(
-    (entries: { switchId: string; port: string; fields: PortChangeField[] }[]) => {
-      if (entries.length === 0) return;
-
-      setRemoteHighlights((current) => {
-        const next = { ...current };
-        for (const entry of entries) {
-          next[portChangeKey(entry)] = { fields: entry.fields };
-        }
-        return next;
-      });
-
-      for (const entry of entries) {
-        const key = portChangeKey(entry);
-        if (clearHighlightTimers.current[key]) {
-          clearTimeout(clearHighlightTimers.current[key]);
-        }
-        clearHighlightTimers.current[key] = setTimeout(() => {
-          setRemoteHighlights((current) => {
-            if (!current[key]) return current;
-            const next = { ...current };
-            delete next[key];
-            return next;
-          });
-          delete clearHighlightTimers.current[key];
-        }, HIGHLIGHT_MS);
-      }
-    },
-    [],
-  );
-
-  const highlightRemoteChanges = useCallback(
-    (changes: ReturnType<typeof detectPortChanges>) => {
-      const external = changes.filter(
-        (change) => !isOwnPortChange(applyStatesRef.current, change.switchId, change.port),
-      );
-      if (external.length === 0) return;
-
-      markRemotePorts(
-        external.map((change) => ({
-          switchId: change.switchId,
-          port: change.port,
-          fields: change.fields,
-        })),
-      );
-    },
-    [markRemotePorts],
-  );
-
-  const handleSnapshotUpdate = useCallback(
-    (next: RuntimeSnapshot) => {
-      const prev = prevSnapshotRef.current;
-      if (prev && prev.switches.length > 0) {
-        const changes = detectPortChanges(prev, next);
-        if (changes.length > 0) {
-          highlightRemoteChanges(changes);
-        }
-      }
-      prevSnapshotRef.current = next;
-      setSnapshot(next);
-    },
-    [highlightRemoteChanges],
-  );
-
   const failPending = useCallback(
     (message: string) => {
       const key = lastPendingKey.current;
@@ -202,7 +122,7 @@ export function useWebSocket() {
         try {
           const msg = JSON.parse(ev.data) as WSMessage;
           if (msg.type === 'state-update' && msg.switches) {
-            handleSnapshotUpdate({
+            setSnapshot({
               switches: msg.switches,
               portGroups: msg.portGroups ?? [],
               discoveredVlans: msg.discoveredVlans ?? [],
@@ -210,86 +130,74 @@ export function useWebSocket() {
             });
             return;
           }
-          if (msg.type === 'vlan-applying') {
-            if (msg.switchId && msg.port) {
-              const key = portApplyKey(msg.switchId, msg.port);
-              if (key !== lastPendingKey.current) {
-                setApplyState(key, { status: 'pending' });
-              }
-            }
-            return;
-          }
-          if (msg.type === 'group-vlan-applying') {
-            if (msg.groupId) {
-              const key = groupApplyKey(msg.groupId);
-              if (key !== lastPendingKey.current) {
-                setApplyState(key, { status: 'pending' });
-              }
-            }
-            return;
-          }
-          if (msg.type === 'vlan-changed') {
-            const key =
-              msg.switchId && msg.port ? portApplyKey(msg.switchId, msg.port) : lastPendingKey.current;
-            const isOwn = key !== null && key === lastPendingKey.current;
 
-            if (key && msg.ok) {
-              if (isOwn) {
-                setApplyState(key, { status: 'success' });
-                showFeedback({
-                  type: 'success',
-                  message: `Applied VLAN ${msg.vlan} on ${msg.port}`,
-                });
-                lastPendingKey.current = null;
-              } else if (msg.switchId && msg.port) {
-                const key = portApplyKey(msg.switchId, msg.port);
-                setApplyState(key, { status: 'success' });
-                markRemotePorts([
-                  { switchId: msg.switchId, port: msg.port, fields: ['vlan'] },
-                ]);
-                showFeedback({
-                  type: 'info',
-                  message: `${msg.port} → VLAN ${msg.vlan}`,
-                });
+          if (msg.type === 'vlan-applying') {
+            if (!msg.switchId || !msg.port) return;
+            const key = portApplyKey(msg.switchId, msg.port);
+            setApplyState(key, { status: 'pending' });
+            if (key !== lastPendingKey.current) {
+              showFeedback({
+                type: 'pending',
+                message: `Applying VLAN ${msg.vlan} on ${msg.port}…`,
+              });
+            }
+            return;
+          }
+
+          if (msg.type === 'group-vlan-applying') {
+            if (!msg.groupId) return;
+            const key = groupApplyKey(msg.groupId);
+            const group = snapshotRef.current.portGroups.find((g) => g.id === msg.groupId);
+            if (group) {
+              for (const member of group.members) {
+                setApplyState(portApplyKey(member.switchId, member.port), { status: 'pending' });
               }
-            } else if (key && !msg.ok && isOwn) {
+            }
+            setApplyState(key, { status: 'pending' });
+            if (key !== lastPendingKey.current) {
+              showFeedback({
+                type: 'pending',
+                message: `Applying VLAN ${msg.vlan} to group…`,
+              });
+            }
+            return;
+          }
+
+          if (msg.type === 'vlan-changed') {
+            if (!msg.switchId || !msg.port) return;
+            const key = portApplyKey(msg.switchId, msg.port);
+            if (msg.ok) {
+              setApplyState(key, { status: 'success' });
+              showFeedback({
+                type: 'success',
+                message: `Applied VLAN ${msg.vlan} on ${msg.port}`,
+              });
+            } else {
               setApplyState(key, { status: 'error', message: 'VLAN apply failed' });
-              showFeedback({ type: 'error', message: 'VLAN apply failed' });
+              showFeedback({ type: 'error', message: `Failed to apply VLAN on ${msg.port}` });
+            }
+            if (key === lastPendingKey.current) {
               lastPendingKey.current = null;
             }
             return;
           }
-          if (msg.type === 'group-vlan-changed') {
-            const key = msg.groupId ? groupApplyKey(msg.groupId) : lastPendingKey.current;
-            const isOwn = key !== null && key === lastPendingKey.current;
 
-            if (key && msg.ok) {
-              if (isOwn) {
-                setApplyState(key, { status: 'success' });
-                showFeedback({
-                  type: 'success',
-                  message: `Applied VLAN ${msg.vlan} to group`,
-                });
-                lastPendingKey.current = null;
-              } else {
-                if (msg.groupId) {
-                  setApplyState(groupApplyKey(msg.groupId), { status: 'success' });
-                }
-                const entries =
-                  msg.results
-                    ?.filter((r) => r.ok)
-                    .map((r) => ({
-                      switchId: r.switchId,
-                      port: r.port,
-                      fields: ['vlan' as PortChangeField],
-                    })) ?? [];
-                markRemotePorts(entries);
-                showFeedback({
-                  type: 'info',
-                  message: `Group → VLAN ${msg.vlan}`,
-                });
-              }
-            } else if (key && !msg.ok && isOwn) {
+          if (msg.type === 'group-vlan-changed') {
+            if (!msg.groupId) return;
+            const key = groupApplyKey(msg.groupId);
+            for (const result of msg.results ?? []) {
+              setApplyState(portApplyKey(result.switchId, result.port), {
+                status: result.ok ? 'success' : 'error',
+                message: result.ok ? undefined : result.error,
+              });
+            }
+            if (msg.ok) {
+              setApplyState(key, { status: 'success' });
+              showFeedback({
+                type: 'success',
+                message: `Applied VLAN ${msg.vlan} to group`,
+              });
+            } else {
               setApplyState(key, {
                 status: 'error',
                 message: 'Some ports in the group failed to update',
@@ -298,10 +206,13 @@ export function useWebSocket() {
                 type: 'error',
                 message: 'Some ports in the group failed to update',
               });
+            }
+            if (key === lastPendingKey.current) {
               lastPendingKey.current = null;
             }
             return;
           }
+
           if (msg.type === 'error' && msg.message) {
             failPending(msg.message);
           }
@@ -318,10 +229,9 @@ export function useWebSocket() {
       clearTimeout(retryTimer);
       if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
       Object.values(clearStateTimers.current).forEach(clearTimeout);
-      Object.values(clearHighlightTimers.current).forEach(clearTimeout);
       wsRef.current?.close();
     };
-  }, [failPending, handleSnapshotUpdate, markRemotePorts, setApplyState, showFeedback]);
+  }, [failPending, setApplyState, showFeedback]);
 
   const send = useCallback((msg: WSMessage): boolean => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
@@ -351,6 +261,12 @@ export function useWebSocket() {
     (groupId: string, vlan: number) => {
       const key = groupApplyKey(groupId);
       lastPendingKey.current = key;
+      const group = snapshotRef.current.portGroups.find((g) => g.id === groupId);
+      if (group) {
+        for (const member of group.members) {
+          setApplyState(portApplyKey(member.switchId, member.port), { status: 'pending' });
+        }
+      }
       setApplyState(key, { status: 'pending' });
       showFeedback({
         type: 'pending',
@@ -382,12 +298,6 @@ export function useWebSocket() {
     [applyStates],
   );
 
-  const getPortRemoteChange = useCallback(
-    (switchId: string, port: string): RemoteHighlight | null =>
-      remoteHighlights[portChangeKey({ switchId, port })] ?? null,
-    [remoteHighlights],
-  );
-
   return {
     connected,
     snapshot,
@@ -397,6 +307,5 @@ export function useWebSocket() {
     refreshSwitch,
     getPortApplyStatus,
     getGroupApplyStatus,
-    getPortRemoteChange,
   };
 }
