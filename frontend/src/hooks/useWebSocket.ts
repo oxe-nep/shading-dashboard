@@ -28,10 +28,12 @@ function wsUrl(): string {
   const env = process.env.NEXT_PUBLIC_WS_URL;
   if (env) return env;
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  if (window.location.port && window.location.port !== '3000') {
-    return `${proto}//${window.location.host}/ws`;
+  // Local Next.js dev — backend on :8080
+  if (window.location.port === '3000') {
+    return `${proto}//${window.location.hostname}:8080/ws`;
   }
-  return `${proto}//${window.location.hostname}:8080/ws`;
+  // Production / k8s — Traefik routes /ws on same host (port is "" on 443/80)
+  return `${proto}//${window.location.host}/ws`;
 }
 
 export function useWebSocket() {
