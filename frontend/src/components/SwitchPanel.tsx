@@ -94,6 +94,7 @@ export default function SwitchPanel({
           <thead>
             <tr>
               <th>Port</th>
+              <th>Description</th>
               <th>Link</th>
               <th>VLAN</th>
               <th>Set VLAN</th>
@@ -106,6 +107,9 @@ export default function SwitchPanel({
               return (
                 <tr key={p.name} className={rowClass(p.operState, applyStatus)}>
                   <td>{p.name}</td>
+                  <td className="port-description" title={p.description || undefined}>
+                    {p.description || '—'}
+                  </td>
                   <td>
                     <span className={`pill pill-${p.operState}`}>{p.operState}</span>
                   </td>
@@ -146,7 +150,7 @@ export default function SwitchPanel({
             })}
             {sw.ports.length === 0 && (
               <tr>
-                <td colSpan={4} className="empty-cell">
+                <td colSpan={5} className="empty-cell">
                   {sw.online ? 'No ports discovered' : 'Offline — no data'}
                 </td>
               </tr>

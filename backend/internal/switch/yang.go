@@ -10,7 +10,18 @@ const nativeNS = "http://cisco.com/ns/yang/Cisco-IOS-XE-native"
 func interfaceFilter() string {
 	return fmt.Sprintf(`<native xmlns="%s">
     <interface>
-      <GigabitEthernet/>
+      <GigabitEthernet>
+        <name/>
+        <description/>
+        <shutdown/>
+        <switchport>
+          <access>
+            <vlan>
+              <vlan/>
+            </vlan>
+          </access>
+        </switchport>
+      </GigabitEthernet>
     </interface>
   </native>`, nativeNS)
 }
@@ -51,6 +62,15 @@ func interfaceFilterFor(ifType, ifName string) string {
     <interface>
       <%s>
         <name>%s</name>
+        <description/>
+        <shutdown/>
+        <switchport>
+          <access>
+            <vlan>
+              <vlan/>
+            </vlan>
+          </access>
+        </switchport>
       </%s>
     </interface>
   </native>`, nativeNS, tag, ifName, tag)

@@ -224,6 +224,13 @@ body {
   text-transform: uppercase;
 }
 
+.port-description {
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-secondary);
+}
+
 .pill {
   display: inline-block;
   padding: 2px 8px;

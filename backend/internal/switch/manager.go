@@ -282,6 +282,9 @@ func (m *Manager) verifyPortsLocked(sw model.SwitchConfig, expected map[string]i
 	for _, p := range ports {
 		for i := range st.Ports {
 			if st.Ports[i].Name == p.Name {
+				if p.Description == "" {
+					p.Description = st.Ports[i].Description
+				}
 				st.Ports[i] = p
 				break
 			}
