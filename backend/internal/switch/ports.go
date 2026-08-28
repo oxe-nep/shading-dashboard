@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/oxe-nep/shading-dashboard/internal/model"
 )
@@ -34,7 +35,12 @@ func IsMonitoredPort(name string) bool {
 func finalizeMonitoredPorts(ports []model.PortState) []model.PortState {
 	byName := make(map[string]model.PortState, monitoredPortMax)
 	for _, p := range ports {
-		if IsMonitoredPort(p.Name) {
+		if !IsMonitoredPort(p.Name) {
+			continue
+		}
+		if existing, ok := byName[p.Name]; ok {
+			byName[p.Name] = mergePortState(existing, p)
+		} else {
 			byName[p.Name] = p
 		}
 	}
@@ -50,6 +56,23 @@ func finalizeMonitoredPorts(ports []model.PortState) []model.PortState {
 			Name:      name,
 			OperState: "unknown",
 		})
+	}
+	return out
+}
+
+func mergePortState(a, b model.PortState) model.PortState {
+	out := a
+	if strings.TrimSpace(b.Description) != "" {
+		out.Description = b.Description
+	}
+	if b.AccessVLAN != nil {
+		out.AccessVLAN = b.AccessVLAN
+	}
+	if b.AdminDown {
+		out.AdminDown = b.AdminDown
+	}
+	if b.OperState != "" && b.OperState != "unknown" {
+		out.OperState = b.OperState
 	}
 	return out
 }

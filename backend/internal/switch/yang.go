@@ -71,7 +71,7 @@ func parseInterfaceName(port string) (ifType, ifName string) {
 
 	switch {
 	case strings.HasPrefix(lower, "tengigabitethernet"):
-		return "TenGigabitEthernet", strings.TrimPrefix(port, "TenGigabitEthernet")
+		return "TenGigabitEthernet", port[len("tengigabitethernet"):]
 	case strings.HasPrefix(lower, "te"):
 		rest := port[2:]
 		if strings.HasPrefix(rest, "ngabitEthernet") {
@@ -79,7 +79,7 @@ func parseInterfaceName(port string) (ifType, ifName string) {
 		}
 		return "TenGigabitEthernet", rest
 	case strings.HasPrefix(lower, "gigabitethernet"):
-		return "GigabitEthernet", strings.TrimPrefix(port, "GigabitEthernet")
+		return "GigabitEthernet", port[len("gigabitethernet"):]
 	case strings.HasPrefix(lower, "gi"):
 		rest := port[2:]
 		if strings.HasPrefix(rest, "gabitEthernet") {
@@ -96,9 +96,24 @@ func displayPortName(ifType, ifName string) string {
 	if strings.EqualFold(ifType, "TenGigabitEthernet") {
 		prefix = "Te"
 	}
-	ifName = strings.TrimSpace(ifName)
+	ifName = strings.TrimSpace(nativeIfName(ifName))
 	if strings.HasPrefix(ifName, "1/") || strings.HasPrefix(ifName, "0/") {
 		return prefix + ifName
 	}
 	return prefix + ifName
+}
+
+// nativeIfName normalizes Cisco native YANG interface names to short form (e.g. 1/0/12).
+// NETCONF may return either "1/0/12" or "GigabitEthernet1/0/12" depending on platform/config.
+func nativeIfName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return ""
+	}
+	_, ifName := parseInterfaceName(name)
+	ifName = strings.TrimSpace(ifName)
+	if ifName == "" {
+		return name
+	}
+	return strings.TrimPrefix(ifName, "/")
 }

@@ -8,6 +8,7 @@ import (
 
 	"github.com/coder/websocket"
 	"github.com/oxe-nep/shading-dashboard/internal/model"
+	"github.com/rs/zerolog/log"
 )
 
 type wsClient struct {
@@ -212,6 +213,7 @@ func (h *Hub) handleMessage(client *wsClient, data []byte) {
 			return
 		}
 		switchID := msg.SwitchID
+		log.Info().Str("switch", switchID).Msg("manual poll requested")
 		go h.manager.PollSwitchByID(switchID)
 
 	default:

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
@@ -15,8 +16,12 @@ import (
 )
 
 func main() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-	log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	zerolog.TimeFieldFormat = time.RFC3339
+	if os.Getenv("LOG_FORMAT") == "json" {
+		log.Logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
+	} else {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr, TimeFormat: time.RFC3339})
+	}
 
 	configPath := envOr("CONFIG_PATH", "data/config.json")
 	port := envIntOr("PORT", 8080)

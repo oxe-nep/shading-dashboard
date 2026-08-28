@@ -3,10 +3,15 @@ package switchdrv
 import (
 	"encoding/xml"
 	"net/url"
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/oxe-nep/shading-dashboard/internal/model"
 )
+
+var giBlockRe = regexp.MustCompile(`(?s)<GigabitEthernet[^>]*>(.*?)</GigabitEthernet>`)
+var accessVlanRe = regexp.MustCompile(`<vlan>(\d+)</vlan>`)
 
 type rpcData struct {
 	Native nativeData `xml:"data>native"`
@@ -55,6 +60,14 @@ func parsePortsFromGet(raw string) []model.PortState {
 }
 
 func parseRawPorts(raw string) []model.PortState {
+	ports := parsePhysicalPortsFromBlocks(raw, "GigabitEthernet")
+	if len(ports) > 0 {
+		return ports
+	}
+	return parseRawPortsXML(raw)
+}
+
+func parseRawPortsXML(raw string) []model.PortState {
 	var data rpcData
 	if err := xml.Unmarshal([]byte(raw), &data); err != nil {
 		return nil
@@ -63,6 +76,81 @@ func parseRawPorts(raw string) []model.PortState {
 	var ports []model.PortState
 	ports = append(ports, mapPhysicalPorts("GigabitEthernet", data.Native.Interface.GigabitEthernet)...)
 	return ports
+}
+
+func parsePhysicalPortsFromBlocks(raw, tag string) []model.PortState {
+	matches := giBlockRe.FindAllStringSubmatch(raw, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+
+	byName := make(map[string][]string)
+	for _, m := range matches {
+		block := m[1]
+		name := nativeIfName(extractXMLValue(block, "name"))
+		if name == "" {
+			continue
+		}
+		byName[name] = append(byName[name], block)
+	}
+
+	ports := make([]model.PortState, 0, len(byName))
+	for name, blocks := range byName {
+		ports = append(ports, buildPortFromBlocks("GigabitEthernet", name, blocks))
+	}
+	return ports
+}
+
+func buildPortFromBlocks(ifType, ifName string, blocks []string) model.PortState {
+	display := displayPortName(ifType, ifName)
+	var desc string
+	var vlan *int
+	adminDown := false
+
+	for _, block := range blocks {
+		if d := extractXMLValue(block, "description"); d != "" {
+			desc = d
+		}
+		if strings.Contains(block, "<shutdown") {
+			adminDown = true
+		}
+		if v := parseAccessVLANFromBlock(block); v != nil {
+			vlan = v
+		}
+	}
+
+	oper := "unknown"
+	if adminDown {
+		oper = "down"
+	}
+
+	return model.PortState{
+		Name:        display,
+		OperState:   oper,
+		AccessVLAN:  vlan,
+		AdminDown:   adminDown,
+		Description: desc,
+	}
+}
+
+func parseAccessVLANFromBlock(block string) *int {
+	swIdx := strings.Index(block, "<switchport>")
+	if swIdx < 0 {
+		return nil
+	}
+	section := block[swIdx:]
+	if end := strings.Index(section, "</switchport>"); end >= 0 {
+		section = section[:end]
+	}
+	matches := accessVlanRe.FindAllStringSubmatch(section, -1)
+	if len(matches) == 0 {
+		return nil
+	}
+	v, err := strconv.Atoi(matches[len(matches)-1][1])
+	if err != nil || v <= 0 {
+		return nil
+	}
+	return &v
 }
 
 func mapPhysicalPorts(ifType string, ifs []physicalInterface) []model.PortState {
@@ -81,7 +169,7 @@ func mapPhysicalPorts(ifType string, ifs []physicalInterface) []model.PortState 
 		}
 
 		out = append(out, model.PortState{
-			Name:        displayPortName(ifType, iface.Name),
+			Name:        displayPortName(ifType, nativeIfName(iface.Name)),
 			OperState:   oper,
 			AccessVLAN:  vlanPtr,
 			AdminDown:   adminDown,

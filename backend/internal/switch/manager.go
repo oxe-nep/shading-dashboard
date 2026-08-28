@@ -134,6 +134,7 @@ func (m *Manager) closeAllClients() {
 
 // RefreshAll re-polls every configured switch. Used at startup and after switch config changes.
 func (m *Manager) RefreshAll() {
+	log.Info().Msg("refreshing all switches")
 	m.closeAllClients()
 	m.PollAll()
 }
@@ -141,13 +142,16 @@ func (m *Manager) RefreshAll() {
 func (m *Manager) PollSwitchByID(id string) {
 	sw, ok := m.store.GetSwitch(id)
 	if !ok {
+		log.Warn().Str("switch", id).Msg("poll skipped: switch not found")
 		return
 	}
+	log.Info().Str("switch", id).Msg("manual poll started")
 	m.pollSwitch(sw)
 }
 
 func (m *Manager) PollAll() {
 	cfg := m.store.Get()
+	log.Info().Int("switches", len(cfg.Switches)).Msg("poll all started")
 	var wg sync.WaitGroup
 	for _, sw := range cfg.Switches {
 		wg.Add(1)
@@ -158,6 +162,7 @@ func (m *Manager) PollAll() {
 	}
 	wg.Wait()
 	m.emitUpdate()
+	log.Info().Msg("poll all finished")
 }
 
 func (m *Manager) pollSwitch(sw model.SwitchConfig) {
@@ -166,11 +171,23 @@ func (m *Manager) pollSwitch(sw model.SwitchConfig) {
 		return
 	}
 
+	m.setPolling(sw.ID, true)
+	m.emitUpdate()
+
+	defer func() {
+		m.setPolling(sw.ID, false)
+		m.emitUpdate()
+	}()
+
+	waitStart := time.Now()
 	m.lockSwitch(sw.ID)
 	defer m.unlockSwitch(sw.ID)
 
-	m.setPolling(sw.ID, true)
-	defer m.setPolling(sw.ID, false)
+	if waited := time.Since(waitStart); waited > 100*time.Millisecond {
+		log.Info().Str("switch", sw.ID).Dur("wait", waited).Msg("poll waited for switch lock")
+	}
+
+	log.Info().Str("switch", sw.ID).Str("ip", sw.IP).Msg("polling switch")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 120*time.Second)
 	defer cancel()
@@ -194,6 +211,12 @@ func (m *Manager) pollSwitch(sw model.SwitchConfig) {
 	st.LastError = ""
 	m.failures[sw.ID] = 0
 	m.mu.Unlock()
+
+	log.Info().
+		Str("switch", sw.ID).
+		Int("ports", len(ports)).
+		Int("vlans", len(vlans)).
+		Msg("poll ok")
 
 	m.emitUpdate()
 }

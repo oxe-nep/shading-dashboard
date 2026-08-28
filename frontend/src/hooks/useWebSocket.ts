@@ -281,9 +281,23 @@ export function useWebSocket() {
 
   const refreshSwitch = useCallback(
     (switchId: string) => {
-      send({ type: 'refresh-switch', switchId });
+      setSnapshot((prev) => ({
+        ...prev,
+        switches: prev.switches.map((s) =>
+          s.id === switchId ? { ...s, polling: true } : s,
+        ),
+      }));
+      if (!send({ type: 'refresh-switch', switchId })) {
+        setSnapshot((prev) => ({
+          ...prev,
+          switches: prev.switches.map((s) =>
+            s.id === switchId ? { ...s, polling: false } : s,
+          ),
+        }));
+        showFeedback({ type: 'error', message: 'Not connected to backend' });
+      }
     },
-    [send],
+    [send, showFeedback],
   );
 
   const getPortApplyStatus = useCallback(
