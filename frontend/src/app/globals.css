@@ -116,16 +116,10 @@ body {
 }
 
 .switches-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-@media (max-width: 1500px) {
-  .switches-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 900px) {
+@media (max-width: 1100px) {
   .switches-grid {
     grid-template-columns: 1fr;
   }
@@ -225,10 +219,129 @@ body {
 }
 
 .port-description {
-  max-width: 180px;
+  max-width: 280px;
   overflow: hidden;
   text-overflow: ellipsis;
   color: var(--text-secondary);
+}
+
+.port-name {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status-table .col-action {
+  width: 40px;
+  text-align: center;
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.btn-icon {
+  padding: 4px 8px;
+  min-width: 32px;
+}
+
+.card-body-compact {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+  font-size: 0.78rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.modal-panel {
+  width: min(420px, 100%);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.modal-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  font-size: 1rem;
+}
+
+.modal-close:hover {
+  color: var(--text-primary);
+}
+
+.modal-details {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 18px;
+}
+
+.modal-details div {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.modal-details dt {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+}
+
+.modal-details dd {
+  margin: 0;
+  font-size: 0.875rem;
+  word-break: break-word;
+}
+
+.modal-form {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.modal-form label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.modal-vlan-select {
+  width: 100%;
+  min-width: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 .pill {

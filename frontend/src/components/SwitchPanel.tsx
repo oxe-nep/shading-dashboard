@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { SwitchRuntimeState, VlanInfo } from '@/lib/types';
-import VlanSelect from '@/components/VlanSelect';
+import SetVlanModal from '@/components/SetVlanModal';
 
 interface SwitchPanelProps {
   sw: SwitchRuntimeState;
@@ -41,24 +41,18 @@ export default function SwitchPanel({
   getPortApplyStatus,
   disabled,
 }: SwitchPanelProps) {
-  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [modalPort, setModalPort] = useState<string | null>(null);
   const panelClass = ['card-panel', sw.online ? 'online' : 'offline'].join(' ');
   const vlanOptions = vlans.length > 0 ? vlans : (sw.vlans ?? []);
   const canEdit = sw.online && !disabled;
+  const activePort = modalPort ? sw.ports.find((p) => p.name === modalPort) ?? null : null;
+  const modalApplyStatus = modalPort ? getPortApplyStatus(sw.id, modalPort) : null;
 
   useEffect(() => {
-    setDrafts((current) => {
-      const next = { ...current };
-      let changed = false;
-      for (const portName of Object.keys(current)) {
-        if (getPortApplyStatus(sw.id, portName) === 'success') {
-          delete next[portName];
-          changed = true;
-        }
-      }
-      return changed ? next : current;
-    });
-  }, [getPortApplyStatus, sw.id]);
+    if (modalPort && modalApplyStatus === 'success') {
+      setModalPort(null);
+    }
+  }, [modalPort, modalApplyStatus]);
 
   return (
     <div className={panelClass}>
@@ -78,15 +72,12 @@ export default function SwitchPanel({
         </button>
       </div>
 
-      <div className="card-body">
-        <div className="info-row">
-          <span className="label">Switch IP</span>
-          <span className="value">{sw.ip || 'Not configured'}</span>
-        </div>
-        <div className="info-row">
-          <span className="label">Last successful poll</span>
-          <span className="value">{formatTime(sw.lastSuccessAt)}</span>
-        </div>
+      <div className="card-body card-body-compact">
+        <span className="muted">{sw.ip || 'Not configured'}</span>
+        <span className="muted">·</span>
+        <span className="muted" title="Last successful poll">
+          {formatTime(sw.lastSuccessAt)}
+        </span>
       </div>
 
       <div className="status-table-wrapper">
@@ -97,7 +88,7 @@ export default function SwitchPanel({
               <th>Description</th>
               <th>Link</th>
               <th>VLAN</th>
-              <th>Set VLAN</th>
+              <th className="col-action" aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
@@ -106,7 +97,7 @@ export default function SwitchPanel({
               const pending = applyStatus === 'pending';
               return (
                 <tr key={p.name} className={rowClass(p.operState, applyStatus)}>
-                  <td>{p.name}</td>
+                  <td className="port-name">{p.name}</td>
                   <td className="port-description" title={p.description || undefined}>
                     {p.description || '—'}
                   </td>
@@ -116,34 +107,20 @@ export default function SwitchPanel({
                   <td title={p.accessVlanTitle ?? undefined}>
                     {p.accessVlanLabel ?? (p.accessVlan != null ? String(p.accessVlan) : '—')}
                   </td>
-                  <td>
-                    <div className="vlan-set-row">
-                      <VlanSelect
-                        vlans={vlanOptions}
-                        value={drafts[p.name] ?? ''}
-                        disabled={!canEdit || pending}
-                        onChange={(value) =>
-                          setDrafts((d) => ({ ...d, [p.name]: value }))
-                        }
-                      />
-                      <button
-                        type="button"
-                        className="btn btn-sm btn-primary"
-                        disabled={!canEdit || pending || !drafts[p.name]}
-                        onClick={() => {
-                          const vlan = parseInt(drafts[p.name], 10);
-                          if (vlan > 0) onSetVlan(sw.id, p.name, vlan);
-                        }}
-                      >
-                        {pending ? (
-                          <>
-                            <i className="fas fa-spinner fa-spin" /> …
-                          </>
-                        ) : (
-                          'Apply'
-                        )}
-                      </button>
-                    </div>
+                  <td className="col-action">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-icon"
+                      disabled={!canEdit || pending}
+                      title="Set VLAN"
+                      onClick={() => setModalPort(p.name)}
+                    >
+                      {pending ? (
+                        <i className="fas fa-spinner fa-spin" />
+                      ) : (
+                        <i className="fas fa-pen" />
+                      )}
+                    </button>
                   </td>
                 </tr>
               );
@@ -158,6 +135,19 @@ export default function SwitchPanel({
           </tbody>
         </table>
       </div>
+
+      <SetVlanModal
+        open={modalPort !== null}
+        port={activePort}
+        switchName={sw.name}
+        vlans={vlanOptions}
+        applyStatus={modalApplyStatus}
+        canEdit={canEdit}
+        onClose={() => setModalPort(null)}
+        onApply={(vlan) => {
+          if (modalPort) onSetVlan(sw.id, modalPort, vlan);
+        }}
+      />
 
       {sw.lastError && (
         <div className="card-error">
